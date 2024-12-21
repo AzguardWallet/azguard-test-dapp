@@ -48,7 +48,7 @@ async function connect() {
 		session.value = await web3Modal.connect({
 			requiredNamespaces: {
 				aztec: {
-					chains: ["aztec:41337"],
+					chains: ["aztec:31337"],
 					methods: ["aztec_execute"],
 					events: ["accountsChanged"],
 				},
@@ -199,7 +199,7 @@ watch(
 					account: selectedAccount.value,
 					params: params,
 				},
-				chainId: "aztec:41337",
+				chainId: "aztec:31337",
 			}
 
 			addressFrom.value = selectedAccount.value
@@ -219,7 +219,7 @@ watch(
 				account: selectedAccount.value,
 				params: params.value,
 			},
-			chainId: "aztec:41337",
+			chainId: "aztec:31337",
 		}
 	}
 )
