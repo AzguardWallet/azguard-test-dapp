@@ -11,7 +11,7 @@ const router = createRouter({
 		{
 			path: "/",
 			name: "App",
-			component: WalletConnect,
+			redirect: { name: "Wallet Connect" }
 		},
 		{
 			path: "/wc",
@@ -26,7 +26,7 @@ const router = createRouter({
 		{
 			path: '/:catchAll(.*)*',
 			name: "NotFound",
-			redirect: { name: "App" }
+			redirect: { name: "Wallet Connect" }
 		}
 	],
 })
