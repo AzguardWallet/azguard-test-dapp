@@ -41,7 +41,25 @@ web3Modal.onSessionExpire(() => dropSession())
 const isConnecting = ref(false)
 const isSending = ref(false)
 
+async function checkIfSessionExists() {
+	let sess =  await web3Modal.getSession()
+	if (sess) {
+		session.value = sess
+		let accs = session.value?.namespaces.aztec.accounts
+		accounts.value = accs.map(acc => acc.split(":").pop())
+		selectedAccount.value = accounts.value[0]
+		connected.value = true
+
+		updateSession(session.value)
+		updateAccounts(accounts.value)
+		updateConnectionStatus(connected.value)
+	}
+}
+
 async function connect() {
+	await checkIfSessionExists()
+	if (session.value) return
+
 	try {
 		isConnecting.value = true
 
@@ -231,9 +249,11 @@ watch(
 	}
 )
 
-onMounted(() => {
+onMounted(async () => {
 	session.value = getSession()
-	if (session.value) {
+	if (!session.value) {
+		checkIfSessionExists()
+	} else {
 		accounts.value = getAccounts()
 		selectedAccount.value = accounts.value[0]
 		connected.value = true
