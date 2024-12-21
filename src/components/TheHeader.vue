@@ -55,7 +55,7 @@ watch(
 
 <template>
 	<Flex align="center" justify="between" :class="$style.wrapper">
-		<RouterLink to="/">
+		<RouterLink to="/wc">
 			<Flex align="center" gap="6" :class="$style.logo">
 				<Icon name="logo" size="20" color="primary" />
 				<Text size="18" color="primary" :class="$style.name">Azguard Test App</Text>
@@ -80,6 +80,10 @@ watch(
 				<div v-if="['Wallet Connect', 'Azguard SDK'].includes(route.name)" :style="highlightStyle" :class="$style.highlight" />
 			</Flex>
 		</div>
+
+		<a href="https://github.com/AzguardWallet/azguard-test-dapp" target="_blank">
+			<Icon name="github" size="20" color="primary" />
+		</a>
 	</Flex>
 </template>
 
