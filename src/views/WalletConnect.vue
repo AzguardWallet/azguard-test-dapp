@@ -141,64 +141,63 @@ const handleSelectAccount = (acc) => {
 	selectedAccount.value = acc
 }
 
-const addressFrom = ref("0x0249ff6810cafb31ac99511292d0104ba160292bed3ca4a0eb9d7ac2f37e5371")
+const addressFrom = computed(() => selectedAccount.value)
 const addressTo = ref("0x02c2a6d5a406673674d8405ecb48f7cb26322a6b7d7724ee1b47be8c61d0467f")
-const capsule = ref("0x02c2a6d5a406673674d8405ecb48f7cb26322a6b7d7724ee1b47be8c61d0467f")
 const contract = ref("0x03f5eb79b443df7879b6903082dc0585d235011fdf42c91594c72dce2d64adc3")
 const amount = ref("100")
 
 const params = computed(() => {
 	return [
 		{
-			type: "call",
+			kind: "call",
 			contract: contract.value,
 			method: "transfer",
 			args: [addressTo.value, 1],
 		},
 		{
-			type: "add_capsule",
-			capsule: [capsule.value],
+			kind: "add_capsule",
+			capsule: [contract.value],
 		},
 		{
-			type: "add_contact",
+			kind: "add_contact",
 			address: contract.value,
 		},
 		{
-			type: "authorize_call",
-			registry: false,
+			kind: "authorize_call",
+			isPublic: false,
 			caller: addressFrom.value,
 			contract: contract.value,
 			method: "transfer_in_public",
 			args: [addressFrom.value, addressTo.value, amount.value, 0],
 		},
 		{
-			type: "authorize_call",
-			registry: true,
+			kind: "authorize_call",
+			isPublic: true,
 			caller: addressFrom.value,
 			contract: contract.value,
 			method: "transfer_in_public",
 			args: [addressFrom.value, addressTo.value, amount.value, 0],
 		},
 		{
-			type: "authorize_intent",
-			registry: false,
+			kind: "authorize_intent",
+			isPublic: false,
 			consumer: contract.value,
 			intent: [addressTo.value],
 		},
 		{
-			type: "authorize_intent",
-			registry: true,
+			kind: "authorize_intent",
+			isPublic: true,
 			consumer: contract.value,
 			intent: [addressTo.value],
 		},
 		{
-			type: "call",
+			kind: "call",
 			contract: contract.value,
 			method: "transfer_in_public",
 			args: [addressFrom.value, addressTo.value, amount.value, 0],
 		},
 		{
-			type: "call",
+			kind: "call",
 			contract: contract.value,
 			method: "transfer_in_public",
 			args: [addressFrom.value, addressTo.value, amount.value, 0],
@@ -228,7 +227,7 @@ watch(
 )
 
 watch(
-	() => [selectedAccount.value, addressFrom.value, addressTo.value, capsule.value, contract.value, amount.value],
+	() => [selectedAccount.value, addressFrom.value, addressTo.value, contract.value, amount.value],
 	() => {
 		sendPayload.value = {
 			topic: session.value.topic,
@@ -287,23 +286,13 @@ onMounted(async () => {
 				</Flex>
 
 				<Flex direction="column" align="start" gap="4" :style="{width: '100%'}">
-					<Text size="14" color="primary">Address From</Text>
-					<input v-model="addressFrom" :class="$style.input" />
-				</Flex>
-				
-				<Flex direction="column" align="start" gap="4" :style="{width: '100%'}">
-					<Text size="14" color="primary">Address To</Text>
-					<input v-model="addressTo" :class="$style.input" />
-				</Flex>
-
-				<Flex direction="column" align="start" gap="4" :style="{width: '100%'}">
-					<Text size="14" color="primary">Contract</Text>
+					<Text size="14" color="primary">Token</Text>
 					<input v-model="contract" :class="$style.input" />
 				</Flex>
 
 				<Flex direction="column" align="start" gap="4" :style="{width: '100%'}">
-					<Text size="14" color="primary">Capsule</Text>
-					<input v-model="capsule" :class="$style.input" />
+					<Text size="14" color="primary">Recipient</Text>
+					<input v-model="addressTo" :class="$style.input" />
 				</Flex>
 
 				<Flex direction="column" align="start" gap="4" :style="{width: '100%'}">
