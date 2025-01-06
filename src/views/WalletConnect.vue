@@ -28,7 +28,7 @@ const metadata = {
     name: "Azguard Test App",
     description: "Azguard Test App description",
     url: "https://azguardwallet.io/",
-    icons: [],
+    icons: ["https://somestaffspace.fra1.digitaloceanspaces.com/logo.png"],
 }
 
 const web3Modal = new WalletConnectModalSign({
@@ -71,13 +71,13 @@ async function connect() {
 					events: ["accountsChanged"],
 				},
 			},
-			// optionalNamespaces: {
-			// 	aztec: {
-			// 		chains: ["aztec:31337", "aztec:51337"],
-			// 		methods: ["aztec_execute"],
-			// 		events: ["accountsChanged"],
-			// 	},
-			// },
+			optionalNamespaces: {
+				aztec: {
+					chains: ["aztec:41337", "aztec:51337"],
+					methods: ["aztec_execute"],
+					events: ["accountsChanged"],
+				},
+			},
 		});
 		
 		let accs = session.value?.namespaces.aztec.accounts
