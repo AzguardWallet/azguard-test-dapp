@@ -2,7 +2,6 @@
 /** Vendor */
 import { ref, reactive, watch, onMounted } from "vue"
 import { useRoute } from "vue-router"
-import { storeToRefs } from "pinia"
 
 const route = useRoute()
 
@@ -10,14 +9,14 @@ const tabEls = ref()
 
 const tabs = ref([
 	{
-		icon: "wallet-connect",
-		name: "Wallet Connect",
-		path: "/wc",
-	},
-	{
 		icon: "sdk",
 		name: "Azguard SDK",
 		path: "/sdk",
+	},
+	{
+		icon: "wallet-connect",
+		name: "Wallet Connect",
+		path: "/wc",
 	},
 ])
 
