@@ -171,7 +171,7 @@ onBeforeMount(async () => {
 			clearInterval(detectAzguard);
 			installed.value = true;
 
-			azguard = await window.azguard.getClient();
+			azguard = window.azguard.createClient();
 			azguard.on("session_updated", onSessionUpdated)
 			azguard.on("session_closed", onSessionClosed)
 			
