@@ -11,7 +11,7 @@ let web3Modal;
 
 const session = ref()
 const accounts = computed(() => [
-	...new Set(Object.values(session.value?.namespaces ?? {}).flatMap(x => x.accounts.map(x => x.split(":").at(-1))))
+	...new Set(Object.values(session.value?.namespaces ?? {}).flatMap(x => x.accounts))
 ])
 
 const sender = ref()
@@ -23,6 +23,10 @@ const result = ref();
 
 const loading = ref();
 const showSession = ref();
+
+const getChain = (account) => account.substring(0, account.lastIndexOf(":"));
+
+const getAddress = (account) => account.split(":").at(-1);
 
 const buildConnectionParams = () => {
 	return {
@@ -60,7 +64,7 @@ const buildConnectionParams = () => {
 const buildExecutionParams = () => {
 	return {
 		topic: session.value?.topic,
-		chainId: "aztec:41337",
+		chainId: getChain(sender.value),
 		request: {
 			method: "execute",
 			params: {
@@ -68,19 +72,19 @@ const buildExecutionParams = () => {
 				operations: [
 					{
 						kind: "register_contract",
-						chain: "aztec:41337",
+						chain: getChain(sender.value),
 						address: contract.value,
 					},
 					{
 						kind: "simulate_unconstrained",
-						account: `aztec:41337:${sender.value}`,
+						account: sender.value,
 						contract: contract.value,
 						method: "balance_of_private",
-						args: [sender.value],
+						args: [getAddress(sender.value)],
 					},
 					{
 						kind: "send_transaction",
-						account: `aztec:41337:${sender.value}`,
+						account: sender.value,
 						actions: [
 							{
 								kind: "call",
@@ -187,7 +191,7 @@ onBeforeMount(async () => {
 watch(
 	() => accounts.value,
 	() => {
-		sender.value = accounts.value.at(0);
+		selectSender(accounts.value.at(0));
 	},
 );
 
@@ -238,7 +242,7 @@ watch(
 							color="secondary"
 							:class="[$style.account, account === sender && $style.account_selected]"
 						>
-							{{ account.substring(0, 14) }} ••• {{ account.substring(58) }}
+							{{ getAddress(account).substring(0, 14) }} ••• {{ getAddress(account).substring(58) }}
 						</Text>
 					</Flex>
 
