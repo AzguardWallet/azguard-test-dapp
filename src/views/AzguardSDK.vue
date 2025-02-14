@@ -24,9 +24,9 @@ const result = ref();
 const loading = ref();
 const showSession = ref();
 
-const getChain = (account) => account.substring(0, account.lastIndexOf(":"));
+const getChain = (account) => account?.substring(0, account.lastIndexOf(":"));
 
-const getAddress = (account) => account.split(":").at(-1);
+const getAddress = (account) => account?.split(":").at(-1);
 
 const buildConnectionParams = () => {
 	return {
