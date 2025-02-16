@@ -1,109 +1,138 @@
 <script setup>
 /** Vendor */
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeMount, ref, watch } from 'vue';
 import { WalletConnectModalSign } from "@walletconnect/modal-sign-html"
 
 /** UI */
 import JsonViewer from "@/components/ui/JsonViewer/JsonViewer.vue"
 import Tooltip from '@/components/ui/Tooltip.vue'
 
-/** Utils */
-import { longHash } from "@/services/utils"
-
-/** Store */
-import { clearStorage, getAccounts, getSession, updateAccounts, updateConnectionStatus, updateSession } from "@/stores/wallet.js"
+let web3Modal;
 
 const session = ref()
-const accounts = ref([])
-const connected = ref()
+const accounts = computed(() => [
+	...new Set(Object.values(session.value?.namespaces ?? {}).flatMap(x => x.accounts))
+])
 
-const selectedAccount = ref()
-const sendPayload = ref()
-const sendPayloadView = ref()
+const sender = ref()
+const contract = ref("0x03f5eb79b443df7879b6903082dc0585d235011fdf42c91594c72dce2d64adc3")
+const recipient = ref("0x02c2a6d5a406673674d8405ecb48f7cb26322a6b7d7724ee1b47be8c61d0467f")
+const amount = ref("100")
+const params = ref();
+const result = ref();
 
-const viewSession = ref(false)
+const loading = ref();
+const showSession = ref();
 
-const projectId = import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID
-const metadata = {
-    name: "Azguard Test App",
-    description: "Azguard Test App description",
-    url: "https://azguardwallet.io/",
-    icons: ["https://somestaffspace.fra1.digitaloceanspaces.com/logo.png"],
-}
+const getChain = (account) => account?.substring(0, account.lastIndexOf(":"));
 
-const web3Modal = new WalletConnectModalSign({
-	projectId,
-	metadata,
-})
-web3Modal.onSessionDelete(() => dropSession())
-web3Modal.onSessionExpire(() => dropSession())
+const getAddress = (account) => account?.split(":").at(-1);
 
-const isConnecting = ref(false)
-const isSending = ref(false)
-
-async function checkIfSessionExists() {
-	let sess =  await web3Modal.getSession()
-	if (sess) {
-		session.value = sess
-		let accs = session.value?.namespaces.aztec.accounts
-		accounts.value = accs.map(acc => acc.split(":").pop())
-		selectedAccount.value = accounts.value[0]
-		connected.value = true
-
-		updateSession(session.value)
-		updateAccounts(accounts.value)
-		updateConnectionStatus(connected.value)
+const buildConnectionParams = () => {
+	return {
+		requiredNamespaces: {
+			aztec: {
+				chains: [
+					"aztec:41337",
+				],
+				methods: [
+					"register_contract",
+					"send_transaction",
+					"call",
+					"simulate_unconstrained",
+				],
+				events: [],
+			},
+		},
+		optionalNamespaces: {
+			aztec: {
+				chains: [
+					"aztec:31337",
+				],
+				methods: [
+					"register_contract",
+					"send_transaction",
+					"call",
+					"simulate_unconstrained",
+				],
+				events: [],
+			},
+		},
 	}
 }
 
-async function connect() {
-	await checkIfSessionExists()
-	if (session.value) return
+const buildExecutionParams = () => {
+	return {
+		topic: session.value?.topic,
+		chainId: getChain(sender.value),
+		request: {
+			method: "execute",
+			params: {
+				sessionId: session.value?.topic,
+				operations: [
+					{
+						kind: "register_contract",
+						chain: getChain(sender.value),
+						address: contract.value,
+					},
+					{
+						kind: "simulate_unconstrained",
+						account: sender.value,
+						contract: contract.value,
+						method: "balance_of_private",
+						args: [getAddress(sender.value)],
+					},
+					{
+						kind: "send_transaction",
+						account: sender.value,
+						actions: [
+							{
+								kind: "call",
+								contract: contract.value,
+								method: "transfer",
+								args: [recipient.value, amount.value],
+							}
+						]
+					},
+				]
+			},
+		},
+	};
+}
 
+const selectSender = (account) => {
+	sender.value = account;
+}
+
+const tryToRestoreSession = async () => {
 	try {
-		isConnecting.value = true
-
-		session.value = await web3Modal.connect({
-			requiredNamespaces: {
-				aztec: {
-					chains: ["aztec:31337"],
-					methods: ["aztec_execute"],
-					events: ["accountsChanged"],
-				},
-			},
-			optionalNamespaces: {
-				aztec: {
-					chains: ["aztec:41337", "aztec:51337"],
-					methods: ["aztec_execute"],
-					events: ["accountsChanged"],
-				},
-			},
-		});
-		
-		let accs = session.value?.namespaces.aztec.accounts
-		accounts.value = accs.map(acc => acc.split(":").pop())
-		selectedAccount.value = accounts.value[0]
-		connected.value = true
-
-		updateSession(session.value)
-		updateAccounts(accounts.value)
-		updateConnectionStatus(connected.value)
-	} catch (err) {
-		console.error(err);
-	} finally {
-		isConnecting.value = false
+		loading.value = true;
+		session.value = await web3Modal.getSession();
+	}
+	catch (error) {
+		console.error("Failed to restore session:", error);
+	}
+	finally {
+		loading.value = false;
 	}
 }
 
-function dropSession() {
-	session.value = undefined
-	accounts.value = []
-	connected.value = false
-	clearStorage()
+const connect = async () => {
+	try {
+		loading.value = true;
+		session.value = await web3Modal.connect(buildConnectionParams());
+	}
+	catch (error) {
+		console.error("Failed to connect:", error);
+	}
+	finally {
+		loading.value = false;
+	}
 }
 
-async function disconnect() {
+const disconnect = async () => {
 	try {
+		loading.value = true;
 		await web3Modal.disconnect({
 			topic: session.value.topic,
 			reason: {
@@ -111,256 +140,183 @@ async function disconnect() {
 				code: 5000,
 			}
 		})
-	} catch (err) {
-		console.error(err);
-	} finally {
-		dropSession()
+		session.value = undefined;
+	}
+	catch (error) {
+		console.error("Failed to disconnect:", error);
+	}
+	finally {
+		loading.value = false;
 	}
 }
 
-async function sendRequest () {
+const execute = async() => {
 	try {
-		isSending.value = true
-		await web3Modal.request(JSON.parse(sendPayloadView.value))
-	} catch (err) {
-		console.error(err);
-	} finally {
-		isSending.value = false
+		loading.value = true;
+		result.value = await web3Modal.request(params.value);
+	}
+	catch (error) {
+		console.error("Failed to execute:", error);
+		result.value = error;
+	}
+	finally {
+		loading.value = false;
 	}
 }
 
-async function sendEvent() {
-  
+const onSessionDelete = () => {
+	session.value = undefined;
 }
 
-const handleCloseSessionView = () => {
-	viewSession.value = false
+const onSessionExpire = () => {
+	session.value = undefined;
 }
 
-const handleSelectAccount = (acc) => {
-	selectedAccount.value = acc
-}
+onBeforeMount(async () => {
+	web3Modal = new WalletConnectModalSign({
+		projectId: import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID,
+		metadata: {
+			name: "Azguard Test App (WC)",
+			description: "Simple app showing how to interact with the Azguard Wallet via Wallet Connect",
+			url: "https://azguardwallet.io/",
+			icons: ["https://somestaffspace.fra1.digitaloceanspaces.com/logo.png"],
+		},
+	})
+	web3Modal.onSessionDelete(onSessionDelete)
+	web3Modal.onSessionExpire(onSessionExpire)
 
-const addressFrom = computed(() => selectedAccount.value)
-const addressTo = ref("0x02c2a6d5a406673674d8405ecb48f7cb26322a6b7d7724ee1b47be8c61d0467f")
-const contract = ref("0x03f5eb79b443df7879b6903082dc0585d235011fdf42c91594c72dce2d64adc3")
-const amount = ref("100")
-
-const params = computed(() => {
-	return [
-		{
-			kind: "call",
-			contract: contract.value,
-			method: "transfer",
-			args: [addressTo.value, 1],
-		},
-		{
-			kind: "add_capsule",
-			capsule: [contract.value],
-		},
-		{
-			kind: "add_contact",
-			address: contract.value,
-		},
-		{
-			kind: "authorize_call",
-			isPublic: false,
-			caller: addressFrom.value,
-			contract: contract.value,
-			method: "transfer_in_public",
-			args: [addressFrom.value, addressTo.value, amount.value, 0],
-		},
-		{
-			kind: "authorize_call",
-			isPublic: true,
-			caller: addressFrom.value,
-			contract: contract.value,
-			method: "transfer_in_public",
-			args: [addressFrom.value, addressTo.value, amount.value, 0],
-		},
-		{
-			kind: "authorize_intent",
-			isPublic: false,
-			consumer: contract.value,
-			intent: [addressTo.value],
-		},
-		{
-			kind: "authorize_intent",
-			isPublic: true,
-			consumer: contract.value,
-			intent: [addressTo.value],
-		},
-		{
-			kind: "call",
-			contract: contract.value,
-			method: "transfer_in_public",
-			args: [addressFrom.value, addressTo.value, amount.value, 0],
-		},
-		{
-			kind: "call",
-			contract: contract.value,
-			method: "transfer_in_public",
-			args: [addressFrom.value, addressTo.value, amount.value, 0],
-		},
-	]
+	await tryToRestoreSession();
 })
 
 watch(
-	() => session.value,
+	() => accounts.value,
 	() => {
-		if (session.value) {
-			sendPayload.value = {
-				topic: session.value.topic,
-				request: {
-					method: "aztec_execute",
-					account: selectedAccount.value,
-					params: params,
-				},
-				chainId: "aztec:31337",
-			}
-
-			addressFrom.value = selectedAccount.value
-		} else {
-			sendPayload.value = ""
-		}
+		selectSender(accounts.value.at(0));
 	},
-)
+);
 
 watch(
-	() => [selectedAccount.value, addressFrom.value, addressTo.value, contract.value, amount.value],
+	() => [
+		session.value,
+		sender.value,
+		contract.value,
+		recipient.value,
+		amount.value,
+	],
 	() => {
-		sendPayload.value = {
-			topic: session.value.topic,
-			request: {
-				method: "aztec_execute",
-				account: selectedAccount.value,
-				params: params.value,
-			},
-			chainId: "aztec:31337",
-		}
-	}
-)
-
-watch(
-	() => sendPayload.value,
-	() => {
-		sendPayloadView.value = JSON.stringify(sendPayload.value, null, 2)
-	}
-)
-
-onMounted(async () => {
-	session.value = getSession()
-	if (!session.value) {
-		checkIfSessionExists()
-	} else {
-		accounts.value = getAccounts()
-		selectedAccount.value = accounts.value[0]
-		connected.value = true
-	}
-})
+		params.value = buildExecutionParams();
+	},
+);
 </script>
 
 <template>
 	<Flex justify="center">
 		<Flex direction="column" align="center" justify="center" gap="12" :class="$style.wrapper">
-
-			<Flex v-if="connected && session" justify="end" wide :style="{width: '450px'}">
-				<JsonViewer v-if="viewSession" @close="handleCloseSessionView" :data="session" :modal="true" />
-
-				<Text @click="viewSession = true" size="13" color="tertiary" :class="$style.session_info">View session info</Text>
-			</Flex>
-
-			<Flex v-if="connected" direction="column" gap="16" :class="$style.section_big">
-				<Flex direction="column" align="start" gap="6" :class="$style.accounts" :style="{width: '100%'}">
-					<Text size="14" color="primary">Select Account</Text>
-
-					<Text
-						v-for="acc in accounts"
-						@click="handleSelectAccount(acc)"
-						size="13"
-						color="secondary"
-						:class="[$style.account, selectedAccount === acc && $style.account_selected]"
+			<template v-if="!session">
+				<Flex direction="column" gap="12" :class="$style.section">
+					<Flex
+						@click="connect"
+						align="center"
+						justify="center"
+						:class="[$style.button, $style.green, loading && $style.disabled]"
 					>
-						{{ longHash(acc) }}
-					</Text>
+						<Flex align="center" gap="6">
+							<Text size="16" color="black">Connect</Text>
+						</Flex>
+					</Flex>
 				</Flex>
-
-				<Flex direction="column" align="start" gap="4" :style="{width: '100%'}">
-					<Text size="14" color="primary">Token</Text>
-					<input v-model="contract" :class="$style.input" />
+			</template>
+			<template v-else>
+				<Flex justify="end" wide :style="{width: '450px'}">
+					<JsonViewer v-if="showSession" @close="showSession = false" :data="session" :modal="true" />
+					<Text @click="showSession = true" size="13" color="tertiary" :class="$style.session_info">View session info</Text>
 				</Flex>
+				<Flex direction="column" gap="16" :class="$style.section_big">
+					<Flex direction="column" align="start" gap="6" :class="$style.accounts" :style="{width: '100%'}">
+						<Text size="14" color="primary">Select Account</Text>
 
-				<Flex direction="column" align="start" gap="4" :style="{width: '100%'}">
-					<Text size="14" color="primary">Recipient</Text>
-					<input v-model="addressTo" :class="$style.input" />
-				</Flex>
+						<Text
+							v-for="account in accounts"
+							@click="selectSender(account)"
+							size="13"
+							color="secondary"
+							:class="[$style.account, account === sender && $style.account_selected]"
+						>
+							{{ getAddress(account).substring(0, 14) }} ••• {{ getAddress(account).substring(58) }}
+						</Text>
+					</Flex>
 
-				<Flex direction="column" align="start" gap="4" :style="{width: '100%'}">
-					<Text size="14" color="primary">Amount</Text>
-					<input v-model="amount" :class="$style.input" />
-				</Flex>
+					<Flex direction="column" align="start" gap="4" :style="{width: '100%'}">
+						<Text size="14" color="primary">Token</Text>
+						<input v-model="contract" :class="$style.input" />
+					</Flex>
 
-				<Flex direction="column" align="start" gap="4" :style="{width: '100%'}" wide>
-					<Flex align="center" justify="between" wide>
-						<Text size="14" color="primary">Payload to send</Text>
-						<Tooltip side="top" position="end">
-							<Icon name="info" color="tertiary" />
+					<Flex direction="column" align="start" gap="4" :style="{width: '100%'}">
+						<Text size="14" color="primary">Recipient</Text>
+						<input v-model="recipient" :class="$style.input" />
+					</Flex>
 
-							<template #content>
-								<Flex :style="{width: '250px'}">
-									<Text size="13" weight="500" color="primary">
-										Changes to fields above are reflected in payload, which can also be edited directly in viewer.
-										The final payload will be sent.
-									</Text>
-								</Flex>
-							</template>
-						</Tooltip>
+					<Flex direction="column" align="start" gap="4" :style="{width: '100%'}">
+						<Text size="14" color="primary">Amount</Text>
+						<input v-model="amount" :class="$style.input" />
+					</Flex>
+
+					<Flex direction="column" align="start" gap="4" :style="{width: '100%'}" wide>
+						<Flex align="center" justify="between" wide>
+							<Text size="14" color="primary">Params to send</Text>
+							<Tooltip side="top" position="end">
+								<Icon name="info" color="tertiary" />
+
+								<template #content>
+									<Flex :style="{width: '250px'}">
+										<Text size="13" weight="500" color="primary">
+											You can specify any parameters you want by editing the input below.
+										</Text>
+									</Flex>
+								</template>
+							</Tooltip>
+							
+						</Flex>
 						
-					</Flex>
-					
-					<Flex align="start" direction="column" justify="start" gap="12" :class="$style.json_viewer">
-						<JsonViewer v-model:data="sendPayload" />
-					</Flex>
-				</Flex>
-			</Flex>
-
-			<Flex direction="column" gap="12" :class="$style.section">
-				<Flex
-					v-if="!connected"
-					@click="connect"
-					align="center"
-					justify="center"
-					:class="[$style.button, $style.green, isConnecting && $style.disabled]"
-				>
-					<Flex align="center" gap="6">
-						<Text size="16" color="black">Connect</Text>
-					</Flex>
-				</Flex>
-
-				<Flex v-if="connected" align="center" justify="between" gap="24" wide>
-					<Flex
-						@click="disconnect"
-						align="center"
-						justify="center"
-						:class="[$style.button, $style.gray]"
-					>
-						<Flex align="center" gap="6">
-							<Text size="16" color="black">Disconnect</Text>
-						</Flex>
-					</Flex>
-
-					<Flex
-						@click="sendRequest"
-						align="center"
-						justify="center"
-						:class="[$style.button, $style.green, (isSending || !sendPayloadView) && $style.disabled]"
-					>
-						<Flex align="center" gap="6">
-							<Text size="16" color="black">Send</Text>
+						<Flex align="start" direction="column" justify="start" gap="12" :class="$style.json_viewer">
+							<JsonViewer v-model:data="params" />
 						</Flex>
 					</Flex>
 				</Flex>
-			</Flex>
+				<Flex direction="column" gap="12" :class="$style.section">
+					<Flex align="center" justify="between" gap="24" wide>
+						<Flex
+							@click="disconnect"
+							align="center"
+							justify="center"
+							:class="[$style.button, $style.gray, loading && $style.disabled]"
+						>
+							<Flex align="center" gap="6">
+								<Text size="16" color="black">Disconnect</Text>
+							</Flex>
+						</Flex>
+
+						<Flex
+							@click="execute"
+							align="center"
+							justify="center"
+							:class="[$style.button, $style.green, loading && $style.disabled]"
+						>
+							<Flex align="center" gap="6">
+								<Text size="16" color="black">Send</Text>
+							</Flex>
+						</Flex>
+					</Flex>
+				</Flex>
+				<Flex v-if="result" direction="column" gap="12" :class="$style.section">
+					<Flex direction="column" align="start" gap="4" >
+						<Text size="14" color="secondary">Response</Text>
+						<Text size="14" color="secondary">
+							<pre>{{ JSON.stringify(result, undefined, 4) }}</pre>
+						</Text>
+					</Flex>
+				</Flex>
+			</template>
 		</Flex>
 	</Flex>
 </template>

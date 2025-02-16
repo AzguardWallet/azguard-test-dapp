@@ -2,7 +2,6 @@
 /** Vendor */
 import { ref, reactive, watch, onMounted } from "vue"
 import { useRoute } from "vue-router"
-import { storeToRefs } from "pinia"
 
 const route = useRoute()
 
@@ -10,14 +9,14 @@ const tabEls = ref()
 
 const tabs = ref([
 	{
-		icon: "wallet-connect",
-		name: "Wallet Connect",
-		path: "/wc",
-	},
-	{
 		icon: "sdk",
 		name: "Azguard SDK",
 		path: "/sdk",
+	},
+	{
+		icon: "wallet-connect",
+		name: "Wallet Connect",
+		path: "/wc",
 	},
 ])
 
@@ -37,10 +36,6 @@ const updateHighlightStyle = () => {
 	})
 }
 
-const handleSelectTab = () => {
-	updateHighlightStyle()
-}
-
 onMounted(() => {
 	updateHighlightStyle()
 })
@@ -55,7 +50,7 @@ watch(
 
 <template>
 	<Flex align="center" justify="between" :class="$style.wrapper">
-		<RouterLink to="/wc">
+		<RouterLink to="/">
 			<Flex align="center" gap="6" :class="$style.logo">
 				<Icon name="logo" size="20" color="primary" />
 				<Text size="18" color="primary" :class="$style.name">Azguard Test App</Text>
@@ -77,7 +72,7 @@ watch(
 					</Flex>
 				</RouterLink>
 
-				<div v-if="['Wallet Connect', 'Azguard SDK'].includes(route.name)" :style="highlightStyle" :class="$style.highlight" />
+				<div v-if="['Azguard SDK', 'Wallet Connect'].includes(route.name)" :style="highlightStyle" :class="$style.highlight" />
 			</Flex>
 		</div>
 

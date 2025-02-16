@@ -256,8 +256,8 @@ onUnmounted(() => {
 }
 
 .fullscreen_wrapper {
-	width: 700px;
-	height: 500px;
+	width: 860px;
+	height: 640px;
 
 	position: fixed;
 	top: 50%;
@@ -271,6 +271,7 @@ onUnmounted(() => {
 }
 
 .fullscreen_modal {
+	width: 100%;
 	padding: 0 8px;
 
 	overflow: auto;
