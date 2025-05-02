@@ -39,13 +39,13 @@ const buildConnectionParams = () => {
 		requiredPermissions: [
 			{
 				chains: [
-					"aztec:41337",
+					"aztec:1337",
 				],
 				methods: [
 					"register_contract",
 					"send_transaction",
 					"call",
-					"simulate_unconstrained",
+					"simulate_utility",
 				],
 				events: [],
 			},
@@ -53,13 +53,13 @@ const buildConnectionParams = () => {
 		optionalPermissions: [
 			{
 				chains: [
-					"aztec:31337",
+					"aztec:11155111",
 				],
 				methods: [
 					"register_contract",
 					"send_transaction",
 					"call",
-					"simulate_unconstrained",
+					"simulate_utility",
 				],
 				events: [],
 			},
@@ -77,7 +77,7 @@ const buildExecutionParams = () => {
 				address: contract.value,
 			},
 			{
-				kind: "simulate_unconstrained",
+				kind: "simulate_utility",
 				account: sender.value,
 				contract: contract.value,
 				method: "balance_of_private",
