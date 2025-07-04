@@ -39,7 +39,7 @@ const buildConnectionParams = () => {
 		requiredPermissions: [
 			{
 				chains: [
-					"aztec:1337",
+					"aztec:31337",
 				],
 				methods: [
 					"register_contract",
