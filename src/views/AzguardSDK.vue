@@ -39,14 +39,14 @@ const buildConnectionParams = () => {
 		requiredPermissions: [
 			{
 				chains: ["aztec:11155111"],
-				methods: ["register_contract", "send_transaction", "call", "simulate_utility"],
+				methods: ["register_contract", "send_transaction", "call", "simulate_utility", "add_public_authwit"],
 				events: [],
 			},
 		],
 		optionalPermissions: [
 			{
 				chains: ["aztec:31337"],
-				methods: ["register_contract", "send_transaction", "call", "simulate_utility"],
+				methods: ["register_contract", "send_transaction", "call", "simulate_utility", "add_public_authwit"],
 				events: [],
 			},
 		],
