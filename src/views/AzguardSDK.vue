@@ -89,6 +89,40 @@ const buildExecutionParams = () => {
 						},
 					},
 					{
+						kind: "add_public_authwit",
+						content: {
+							kind: "encoded_call",
+							caller: contract.value,
+							to: contract.value,
+							selector: contract.value,
+							args: [
+								"0x13d1461e662a294bfd70960ca283e6e1ef52ce8c7e74e540956734d47a332961",
+								"0x13d1461e662a294bfd70960ca283e6e1ef52ce8c7e74e540956734d47a332961",
+								100,
+								123,
+							],
+						},
+					},
+					{
+						kind: "add_public_authwit",
+						content: {
+							kind: "intent",
+							consumer: contract.value,
+							contract: contract.value,							
+							intent: [
+								"0x13d1461e662a294bfd70960ca283e6e1ef52ce8c7e74e540956734d47a332961",
+								"0x13d1461e662a294bfd70960ca283e6e1ef52ce8c7e74e540956734d47a332961",
+							],
+						},
+					},
+					{
+						kind: "add_public_authwit",
+						content: {
+							kind: "message_hash",
+							messageHash: contract.value,							
+						},
+					},
+					{
 						kind: "call",
 						contract: contract.value,
 						method: "transfer",
