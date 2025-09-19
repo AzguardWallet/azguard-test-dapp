@@ -1,32 +1,32 @@
 <script setup>
 /** Vendor */
-import { computed, onBeforeMount, ref, watch } from 'vue';
+import { computed, onBeforeMount, ref, watch } from "vue"
 
 /** UI */
 import JsonViewer from "@/components/ui/JsonViewer/JsonViewer.vue"
-import Tooltip from '@/components/ui/Tooltip.vue'
+import Tooltip from "@/components/ui/Tooltip.vue"
 
-const STORAGE_KEY = "azguard:sessions:sdk";
+const STORAGE_KEY = "azguard:sessions:sdk"
 
-let azguard;
+let azguard
 
-const installed = ref();
-const session = ref();
-const accounts = computed(() => session.value?.accounts ?? []);
+const installed = ref()
+const session = ref()
+const accounts = computed(() => session.value?.accounts ?? [])
 
 const sender = ref()
 const contract = ref("0x03f5eb79b443df7879b6903082dc0585d235011fdf42c91594c72dce2d64adc3")
 const recipient = ref("0x02c2a6d5a406673674d8405ecb48f7cb26322a6b7d7724ee1b47be8c61d0467f")
 const amount = ref("100")
-const params = ref();
-const result = ref();
+const params = ref()
+const result = ref()
 
-const loading = ref();
-const showSession = ref();
+const loading = ref()
+const showSession = ref()
 
-const getChain = (account) => account?.substring(0, account.lastIndexOf(":"));
+const getChain = (account) => account?.substring(0, account.lastIndexOf(":"))
 
-const getAddress = (account) => account?.split(":").at(-1);
+const getAddress = (account) => account?.split(":").at(-1)
 
 const buildConnectionParams = () => {
 	return {
@@ -38,32 +38,18 @@ const buildConnectionParams = () => {
 		},
 		requiredPermissions: [
 			{
-				chains: [
-					"aztec:11155111",
-				],
-				methods: [
-					"register_contract",
-					"send_transaction",
-					"call",
-					"simulate_utility",
-				],
+				chains: ["aztec:11155111"],
+				methods: ["register_contract", "send_transaction", "call", "simulate_utility"],
 				events: [],
 			},
 		],
 		optionalPermissions: [
 			{
-				chains: [
-					"aztec:31337",
-				],
-				methods: [
-					"register_contract",
-					"send_transaction",
-					"call",
-					"simulate_utility",
-				],
+				chains: ["aztec:31337"],
+				methods: ["register_contract", "send_transaction", "call", "simulate_utility"],
 				events: [],
 			},
-		]
+		],
 	}
 }
 
@@ -88,121 +74,122 @@ const buildExecutionParams = () => {
 				account: sender.value,
 				actions: [
 					{
+						kind: "add_public_authwit",
+						content: {
+							kind: "call",
+							caller: contract.value,
+							contract: contract.value,
+							method: "transfer_in_public",
+							args: [
+								"0x13d1461e662a294bfd70960ca283e6e1ef52ce8c7e74e540956734d47a332961",
+								"0x13d1461e662a294bfd70960ca283e6e1ef52ce8c7e74e540956734d47a332961",
+								100n,
+								123,
+							],
+						},
+					},
+					{
 						kind: "call",
 						contract: contract.value,
 						method: "transfer",
 						args: [recipient.value, amount.value],
-					}
-				]
+					},
+				],
 			},
-		]
-	};
+		],
+	}
 }
 
 const selectSender = (account) => {
-	sender.value = account;
+	sender.value = account
 }
 
 const tryToRestoreSession = async () => {
 	try {
-		loading.value = true;
-		const sessionId = localStorage.getItem(STORAGE_KEY);
+		loading.value = true
+		const sessionId = localStorage.getItem(STORAGE_KEY)
 		if (sessionId) {
-			session.value = await azguard.request("get_session", sessionId);
+			session.value = await azguard.request("get_session", sessionId)
 		}
-	}
-	catch (error) {
-		console.error("Failed to restore session:", error);
-	}
-	finally {
-		loading.value = false;
+	} catch (error) {
+		console.error("Failed to restore session:", error)
+	} finally {
+		loading.value = false
 	}
 }
 
 const connect = async () => {
 	try {
-		loading.value = true;
-		session.value = await azguard.request("connect", buildConnectionParams());
-		localStorage.setItem(STORAGE_KEY, session.value.id);
-	}
-	catch (error) {
-		console.error("Failed to connect:", error);
-	}
-	finally {
-		loading.value = false;
+		loading.value = true
+		session.value = await azguard.request("connect", buildConnectionParams())
+		localStorage.setItem(STORAGE_KEY, session.value.id)
+	} catch (error) {
+		console.error("Failed to connect:", error)
+	} finally {
+		loading.value = false
 	}
 }
 
 const disconnect = async () => {
 	try {
-		loading.value = true;
-		await azguard.request("close_session", session.value.id);
-	}
-	catch (error) {
-		console.error("Failed to disconnect:", error);
-	}
-	finally {
-		loading.value = false;
+		loading.value = true
+		await azguard.request("close_session", session.value.id)
+	} catch (error) {
+		console.error("Failed to disconnect:", error)
+	} finally {
+		loading.value = false
 	}
 }
 
-const execute = async() => {
+const execute = async () => {
 	try {
-		loading.value = true;
-		result.value = await azguard.request("execute", params.value);
-	}
-	catch (error) {
-		console.error("Failed to execute:", error);
-		result.value = error;
-	}
-	finally {
-		loading.value = false;
+		loading.value = true
+		result.value = await azguard.request("execute", params.value)
+	} catch (error) {
+		console.error("Failed to execute:", error)
+		result.value = error
+	} finally {
+		loading.value = false
 	}
 }
 
 const onSessionUpdated = (session) => {
-	session.value = session;
+	session.value = session
 }
 
 const onSessionClosed = () => {
-	localStorage.removeItem(STORAGE_KEY);
-	session.value = undefined;
+	localStorage.removeItem(STORAGE_KEY)
+	session.value = undefined
 }
 
 onBeforeMount(async () => {
 	const detectAzguard = setInterval(async () => {
 		if (window.azguard) {
-			clearInterval(detectAzguard);
-			installed.value = true;
+			clearInterval(detectAzguard)
+			installed.value = true
 
-			azguard = window.azguard.createClient();
+			azguard = window.azguard.createClient()
 			azguard.on("session_updated", onSessionUpdated)
 			azguard.on("session_closed", onSessionClosed)
-			
-			await tryToRestoreSession();
+
+			await tryToRestoreSession()
 		}
-	}, 50);
+	}, 50)
 })
 
 watch(
 	() => accounts.value,
 	() => {
-		selectSender(accounts.value.at(0));
+		selectSender(accounts.value.at(0))
 	},
-);
+)
 
 watch(
-	() => [
-		session.value,
-		sender.value,
-		contract.value,
-		recipient.value,
-		amount.value,
-	],
+	() => [session.value, sender.value, contract.value, recipient.value, amount.value],
 	() => {
-		params.value = buildExecutionParams();
+		params.value = buildExecutionParams()
 	},
-);
+)
 </script>
 
 <template>
@@ -226,12 +213,12 @@ watch(
 				</Flex>
 			</template>
 			<template v-else>
-				<Flex justify="end" wide :style="{width: '450px'}">
+				<Flex justify="end" wide :style="{ width: '450px' }">
 					<JsonViewer v-if="showSession" @close="showSession = false" :data="session" :modal="true" />
 					<Text @click="showSession = true" size="13" color="tertiary" :class="$style.session_info">View session info</Text>
 				</Flex>
 				<Flex direction="column" gap="16" :class="$style.section_big">
-					<Flex direction="column" align="start" gap="6" :class="$style.accounts" :style="{width: '100%'}">
+					<Flex direction="column" align="start" gap="6" :class="$style.accounts" :style="{ width: '100%' }">
 						<Text size="14" color="primary">Select Account</Text>
 
 						<Text
@@ -245,38 +232,37 @@ watch(
 						</Text>
 					</Flex>
 
-					<Flex direction="column" align="start" gap="4" :style="{width: '100%'}">
+					<Flex direction="column" align="start" gap="4" :style="{ width: '100%' }">
 						<Text size="14" color="primary">Token</Text>
 						<input v-model="contract" :class="$style.input" />
 					</Flex>
 
-					<Flex direction="column" align="start" gap="4" :style="{width: '100%'}">
+					<Flex direction="column" align="start" gap="4" :style="{ width: '100%' }">
 						<Text size="14" color="primary">Recipient</Text>
 						<input v-model="recipient" :class="$style.input" />
 					</Flex>
 
-					<Flex direction="column" align="start" gap="4" :style="{width: '100%'}">
+					<Flex direction="column" align="start" gap="4" :style="{ width: '100%' }">
 						<Text size="14" color="primary">Amount</Text>
 						<input v-model="amount" :class="$style.input" />
 					</Flex>
 
-					<Flex direction="column" align="start" gap="4" :style="{width: '100%'}" wide>
+					<Flex direction="column" align="start" gap="4" :style="{ width: '100%' }" wide>
 						<Flex align="center" justify="between" wide>
 							<Text size="14" color="primary">Params to send</Text>
 							<Tooltip side="top" position="end">
 								<Icon name="info" color="tertiary" />
 
 								<template #content>
-									<Flex :style="{width: '250px'}">
+									<Flex :style="{ width: '250px' }">
 										<Text size="13" weight="500" color="primary">
 											You can specify any parameters you want by editing the input below.
 										</Text>
 									</Flex>
 								</template>
 							</Tooltip>
-							
 						</Flex>
-						
+
 						<Flex align="start" direction="column" justify="start" gap="12" :class="$style.json_viewer">
 							<JsonViewer v-model:data="params" />
 						</Flex>
@@ -308,7 +294,7 @@ watch(
 					</Flex>
 				</Flex>
 				<Flex v-if="result" direction="column" gap="12" :class="$style.section">
-					<Flex direction="column" align="start" gap="4" >
+					<Flex direction="column" align="start" gap="4">
 						<Text size="14" color="secondary">Response</Text>
 						<Text size="14" color="secondary">
 							<pre>{{ JSON.stringify(result, undefined, 4) }}</pre>
@@ -329,7 +315,6 @@ watch(
 	justify-content: center;
 
 	height: auto;
-
 
 	border-radius: 16px;
 	background: linear-gradient(rgba(0, 0, 0, 40%), rgba(0, 0, 0, 0%));
