@@ -68,6 +68,7 @@ const buildConnectionParams = () => {
 	}
 }
 
+
 const buildExecutionParams = () => {
 	return {
 		sessionId: session.value?.id,
