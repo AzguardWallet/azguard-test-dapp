@@ -33,7 +33,7 @@ const buildConnectionParams = () => {
 		requiredNamespaces: {
 			aztec: {
 				chains: [
-					"aztec:1674512022",
+					"aztec:1654394782",
 				],
 				methods: [
 					"register_contract",
